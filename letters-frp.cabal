@@ -36,3 +36,16 @@ executable die
                      , vty
   ghc-options:         -Wall -threaded -O3
   default-language:    Haskell2010
+
+executable letters
+  hs-source-dirs:      app
+  main-is:             letters.hs
+  build-depends:       base >= 4.7 && < 5
+                     , letters-frp
+                     , optics
+                     , random
+                     , reactive-banana
+                     , text
+                     , vty
+  ghc-options:         -Wall -threaded -O3
+  default-language:    Haskell2010

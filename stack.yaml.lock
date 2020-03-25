@@ -11,6 +11,41 @@ packages:
       sha256: 367a55194ed03065dd7cf9e63c851ae4fe56f8533d07cdfe751fa68da9c7d66d
   original:
     hackage: reactive-banana-1.2.1.0@sha256:af0a41dec95e1478acd5280f0fdde51afddf9fbfa4e0a4c226a2c6fa65702796,3975
+- completed:
+    hackage: optics-0.2@sha256:813ef6cc4d2e2b5ee00435831031f38917ba01d1e56dcb62dc18cd0315a9ccb7,6296
+    pantry-tree:
+      size: 1003
+      sha256: 8a74dbcd983fcc96b7b6c5c9fc6da7240dd2e5bdab7caa4927b8287a4cbe5c0f
+  original:
+    hackage: optics-0.2@sha256:813ef6cc4d2e2b5ee00435831031f38917ba01d1e56dcb62dc18cd0315a9ccb7,6296
+- completed:
+    hackage: optics-core-0.2@sha256:cfdf39871553769b59fcc54863a3521d262ea25d8d05d0f41ab87296c560cfa6,4392
+    pantry-tree:
+      size: 4818
+      sha256: 77521681ab5e6fd84a31b7cf9c5f51233141eecd7b9545a1c9eef6b1015776bc
+  original:
+    hackage: optics-core-0.2@sha256:cfdf39871553769b59fcc54863a3521d262ea25d8d05d0f41ab87296c560cfa6,4392
+- completed:
+    hackage: optics-extra-0.2@sha256:211ce1dfd1b3ffd95c1158d8c8beb53cbd17c4d477169e226b1831607f6789eb,3370
+    pantry-tree:
+      size: 1809
+      sha256: cce8df05ef2e673461efa35734e072c54b78c73a17ee4a1e59c94252a3d53788
+  original:
+    hackage: optics-extra-0.2@sha256:211ce1dfd1b3ffd95c1158d8c8beb53cbd17c4d477169e226b1831607f6789eb,3370
+- completed:
+    hackage: optics-th-0.2@sha256:b4f6c5a3f134c697837190ed6da969dd284aefe79e43c3ef793093b607bb83b9,1929
+    pantry-tree:
+      size: 653
+      sha256: f6b5caed956d3761b35769ac518d3f0f407449dafe33154992386f02d9489bad
+  original:
+    hackage: optics-th-0.2@sha256:b4f6c5a3f134c697837190ed6da969dd284aefe79e43c3ef793093b607bb83b9,1929
+- completed:
+    hackage: indexed-profunctors-0.1@sha256:ddf618d0d4c58319c1e735e746bc69a1021f13b6f475dc9614b80af03432e6d4,1016
+    pantry-tree:
+      size: 235
+      sha256: cfd66c0a53be1b45eae72df112ea1158614458bb7b1c9cbbe3410b04ab011ec6
+  original:
+    hackage: indexed-profunctors-0.1@sha256:ddf618d0d4c58319c1e735e746bc69a1021f13b6f475dc9614b80af03432e6d4,1016
 snapshots:
 - completed:
     size: 524996
