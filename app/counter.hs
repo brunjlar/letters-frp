@@ -2,27 +2,30 @@ module Main
     ( main
     ) where
 
-main :: IO ()
-main = putStrLn "counter"
-{-
-import Control.Monad.IO.Class (MonadIO (..))
-import Data.Time
-import Graphics.Vty           as V
-import Reflex.Vty             as R
+import Control.Concurrent
+import Control.Monad
+import Graphics.Vty as V
+import Reactive.Banana as B
+import Reactive.Banana.Frameworks as B
+
+import Reactive.Banana.Vty (runVty)
 
 main :: IO ()
-main = runVtyApp counterApp
+main = do
+    (addTick, tick) <- newAddHandler
+    tid             <- forkIO $ forever $ threadDelay 1000000 >> tick ()
+    runVty addTick describeNetwork 
+    killThread tid
 
-counterApp :: VtyApp t m
-counterApp _ e = do
-    ticksE <- fmap (succ . _tickInfo_n) <$> (liftIO getCurrentTime >>= tickLossy 1)
-    ticksB <- hold 0 ticksE
-    return $ VtyResult (render <$> ticksB) $ fmapMaybe esc e
-  where
-    esc :: V.Event -> Maybe ()
-    esc (EvKey KEsc []) = Just ()
-    esc _               = Nothing
+describeNetwork :: B.Event V.Event
+                -> B.Event ()
+                -> Moment (Behavior Picture, B.Event ())
+describeNetwork _ tickE = do
+    countE <- accumE (0 :: Int) $ const succ <$> tickE 
+    countB <- stepper 0 countE
+    let picB  = render <$> countB
+        quitE = const () <$> filterE (> 10) countE
+    return (picB, quitE)
 
-render :: Integer -> Picture
-render n = picForImage $ V.string defAttr $ show n
--}
+render :: Int -> Picture
+render = picForImage . string defAttr . show
