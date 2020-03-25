@@ -1,5 +1,8 @@
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Reactive.Banana.Vty
     ( runVty
+    , runVtyWithTimer
     ) where
 
 import Control.Concurrent
@@ -11,7 +14,7 @@ import Reactive.Banana.Frameworks as B
 runVty :: AddHandler e 
        -> (   B.Event V.Event 
            -> B.Event e 
-           -> Moment (Behavior Picture, B.Event ())) 
+           -> MomentIO (Behavior Picture, B.Event ())) 
        -> IO ()
 runVty addHandler describeNetwork = do
     cfg                   <- standardIOConfig
@@ -21,7 +24,7 @@ runVty addHandler describeNetwork = do
     network               <- compile $ do
         vtyE          <- fromAddHandler addVtyHandler
         e             <- fromAddHandler addHandler
-        (picB, quitE) <- liftMoment $ describeNetwork vtyE e
+        (picB, quitE) <- describeNetwork vtyE e
         picE          <- changes picB
         reactimate' $ (fmap $ update vty)    <$> picE
         reactimate  $ (const $ putMVar v ()) <$> quitE
@@ -31,3 +34,29 @@ runVty addHandler describeNetwork = do
     pause network
     killThread tid
     shutdown vty
+
+runVtyWithTimer :: forall e. AddHandler e 
+                -> Int
+                -> (   B.Event V.Event 
+                    -> B.Event ()
+                    -> B.Event e 
+                    -> MomentIO (Behavior Picture, B.Event ())) 
+                -> IO ()
+runVtyWithTimer addHandler interval describeNetwork = do
+    (addTimer, tick) <- newAddHandler
+    tid <- forkIO $ forever $ threadDelay interval >> tick ()
+    runVty (addHandler' addTimer) describe
+    killThread tid
+  where
+    addHandler' :: AddHandler () -> AddHandler (Either () e)
+    addHandler' addTimer = AddHandler $ \h -> do
+        unregisterTick <- register addTimer $ h . Left
+        unregisterE    <- register addHandler $ h . Right
+        return $ unregisterTick >> unregisterE
+
+    describe :: B.Event V.Event
+             -> B.Event (Either () e)
+             -> MomentIO (Behavior Picture, B.Event ())
+    describe vtyE e = do
+        let (tickE, e') = split e
+        describeNetwork vtyE tickE e'

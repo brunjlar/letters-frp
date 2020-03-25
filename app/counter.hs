@@ -2,25 +2,23 @@ module Main
     ( main
     ) where
 
-import Control.Concurrent
-import Control.Monad
+import Data.Void
 import Graphics.Vty as V
 import Reactive.Banana as B
 import Reactive.Banana.Frameworks as B
 
-import Reactive.Banana.Vty (runVty)
+import Reactive.Banana.Vty (runVtyWithTimer)
 
 main :: IO ()
 main = do
-    (addTick, tick) <- newAddHandler
-    tid             <- forkIO $ forever $ threadDelay 1000000 >> tick ()
-    runVty addTick describeNetwork 
-    killThread tid
+    (addVoid, _) <- newAddHandler :: IO (AddHandler Void, Handler Void)
+    runVtyWithTimer addVoid 1000000 describeNetwork 
 
 describeNetwork :: B.Event V.Event
                 -> B.Event ()
-                -> Moment (Behavior Picture, B.Event ())
-describeNetwork _ tickE = do
+                -> B.Event Void
+                -> MomentIO (Behavior Picture, B.Event ())
+describeNetwork _ tickE _ = do
     countE <- accumE (0 :: Int) $ const succ <$> tickE 
     countB <- stepper 0 countE
     let picB  = render <$> countB
