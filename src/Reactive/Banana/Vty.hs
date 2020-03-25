@@ -2,11 +2,14 @@
 
 module Reactive.Banana.Vty
     ( runVty
+    , runVty'
     , runVtyWithTimer
+    , runVtyWithTimer'
     ) where
 
 import Control.Concurrent
 import Control.Monad
+import Data.Void (Void)
 import Graphics.Vty as V
 import Reactive.Banana as B
 import Reactive.Banana.Frameworks as B
@@ -35,6 +38,11 @@ runVty addHandler describeNetwork = do
     killThread tid
     shutdown vty
 
+runVty' :: (B.Event V.Event -> MomentIO (Behavior Picture, B.Event ())) -> IO ()
+runVty' describeNetwork = do
+    (addVoid, _) <- newAddHandler :: IO (AddHandler Void, Handler Void)
+    runVty addVoid $ \vtyE _ -> describeNetwork vtyE
+
 runVtyWithTimer :: forall e. AddHandler e 
                 -> Int
                 -> (   B.Event V.Event 
@@ -60,3 +68,13 @@ runVtyWithTimer addHandler interval describeNetwork = do
     describe vtyE e = do
         let (tickE, e') = split e
         describeNetwork vtyE tickE e'
+
+runVtyWithTimer' :: Int
+                 -> (   B.Event V.Event 
+                     -> B.Event ()
+                     -> MomentIO (Behavior Picture, B.Event ())) 
+                 -> IO ()
+runVtyWithTimer' interval describeNetwork = do
+    (addVoid, _) <- newAddHandler :: IO (AddHandler Void, Handler Void)
+    runVtyWithTimer addVoid interval $ \vtyE tickE _ -> describeNetwork vtyE tickE
+
