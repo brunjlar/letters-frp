@@ -221,7 +221,7 @@ render l = picForImage $ vertCat $
     bottomRow = char defAttr '└' V.<|> charFill defAttr '─' cols 1 V.<|> char defAttr '┘'
     statsRow  =
         let score  = "Score: " ++ show (l ^. lScore)
-            lives  = "Lives: " ++ show (l ^. lLives)
+            lives  = L.replicate (l ^. lLives) '♥'
             middle = backgroundFill (cols - L.length score - L.length lives) 1
         in        bar 
             V.<|> string defAttr score
