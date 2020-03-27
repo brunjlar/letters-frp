@@ -92,7 +92,7 @@ typeChar :: Char -> LettersState -> LettersState
 typeChar c l = 
     let oldWords = l ^. lActiveWords
         newWords = mapMaybe f oldWords
-        delta    = L.length oldWords - L.length newWords
+        delta    = fromIntegral $ sum (T.length . _wWord <$> oldWords) - sum (T.length ._wWord <$> newWords)
     in  l & lActiveWords  .~ newWords
           & lScore        %~ (+ delta)
           & lDropInterval .~ if delta > 0 
