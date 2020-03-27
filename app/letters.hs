@@ -7,6 +7,7 @@ module Main
     ( main
     ) where
 
+import Data.Int (Int64)
 import Data.List as L
 import Data.Maybe
 import Data.Text.Lazy as T
@@ -30,7 +31,7 @@ data LettersState = MkLettersState
 
 data ActiveWord = MkActiveWord
     { _wWord  :: !Text
-    , _wIndex :: !Int
+    , _wIndex :: !Int64
     , _wRow   :: !Int
     , _wCol   :: !Int
     }
@@ -64,6 +65,22 @@ dropWords l = l & lActiveWords .~ words'
 addWord :: ActiveWord -> LettersState -> LettersState
 addWord w l = l & lActiveWords %~ (w :)
 
+typeChar :: Char -> LettersState -> LettersState
+typeChar c l = 
+    let oldWords = l ^. lActiveWords
+        newWords = mapMaybe f oldWords
+    in  l & lActiveWords .~ newWords
+          & lScore       %~ (+ (L.length oldWords - L.length newWords))
+  where
+    f :: ActiveWord -> Maybe ActiveWord
+    f a
+        | T.index w i /= c    = Just $ a & wIndex .~ 0
+        | i >= T.length w - 1 = Nothing
+        | otherwise           = Just $ a & wIndex %~ succ
+      where
+        w = a ^. wWord
+        i = a ^. wIndex
+
 gameOver :: LettersState -> Bool
 gameOver l = l ^. lLives <= 0
 
@@ -80,9 +97,10 @@ describeNetwork letters vtyE tickE = mdo
         dropE     = whenE activeB $ const dropWords <$> tickE 
 
     newE <- whenE activeB <$> newWordE lettersB tickE
-    let addE = addWord <$> newE
+    let addE  = addWord <$> newE
+        typeE = typeChar <$> keyE vtyE
 
-    lettersB <- accumB letters $ unionWith (.) addE dropE 
+    lettersB <- accumB letters $ unions [dropE, addE, typeE]
 
     return (render <$> lettersB, escE vtyE)
 
@@ -90,6 +108,13 @@ escE :: B.Event V.Event -> B.Event ()
 escE vtyE = filterJust $ flip fmap vtyE $ \case
     EvKey KEsc [] -> Just ()
     _             -> Nothing
+
+keyE :: B.Event V.Event -> B.Event Char
+keyE vtyE = filterJust $ f <$> vtyE
+  where
+    f :: V.Event -> Maybe Char
+    f (EvKey (KChar c) []) = Just c
+    f _                    = Nothing
 
 newWordE :: Behavior LettersState -> B.Event () -> MomentIO (B.Event ActiveWord)
 newWordE lettersB = fmap filterJust . execute . fmap liftIO . apply (fmap f lettersB)
@@ -131,7 +156,7 @@ render l = picForImage $ vertCat $ go 0 (l ^. lActiveWords) <>
 
     drawWord :: ActiveWord -> Image
     drawWord w = 
-        let (typed, untyped) = T.splitAt (fromIntegral $ w ^. wIndex) (w ^. wWord)
+        let (typed, untyped) = T.splitAt (w ^. wIndex) (w ^. wWord)
         in  string defAttr (L.replicate (w ^. wCol) ' ') V.<|>
             text (defAttr `withStyle` reverseVideo) typed V.<|>
             text defAttr untyped
