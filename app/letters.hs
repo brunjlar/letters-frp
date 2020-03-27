@@ -57,7 +57,7 @@ initialLettersState gen = MkLettersState
     { _lActiveWords  = []
     , _lRows         = 25 
     , _lCols         = 80
-    , _lDropInterval = 10
+    , _lDropInterval = 7
     , _lScore        = 0
     , _lLives        = 3
     , _lNewWord      = gen
@@ -142,7 +142,7 @@ newWordE lettersB = fmap filterJust . execute . fmap liftIO . apply (fmap f lett
             r <- randomRIO (0, l ^. lDropInterval)
             if r > 0 && not (L.null $ l ^. lActiveWords) then return Nothing
                                                        else do
-                w <- l ^. lNewWord
+                w <- newWord
                 c <- randomRIO (0, l ^. lCols - fromIntegral (T.length w))
                 return $ Just MkActiveWord
                     { _wWord  = w
@@ -157,22 +157,49 @@ newWordE lettersB = fmap filterJust . execute . fmap liftIO . apply (fmap f lett
             []      -> False
             (w : _) -> w ^. wRow == 0
 
+        newWord :: IO Text
+        newWord = do
+            w <- l ^. lNewWord
+            if T.length w > fromIntegral (l ^. lCols)
+                then newWord
+                else return w
+
 render :: LettersState -> Picture
-render l = picForImage $ vertCat $ go 0 (l ^. lActiveWords) <>
-    [ charFill defAttr '-' (l ^. lCols) 1
-    , string defAttr $ "Score: " ++ show (l ^. lScore)
-    , string defAttr $ "Lives: " ++ show (l ^. lLives)
-    ]
+render l = picForImage $ vertCat $ 
+    topRow : (go 0 (l ^. lActiveWords) <> [middleRow, statsRow, bottomRow ])
   where
     go :: Int -> [ActiveWord] -> [Image]
-    go row [] = [backgroundFill (l ^. lCols) (l ^. lRows - row)]
+    go row [] = L.replicate (l ^. lRows - row) emptyRow
     go row (w : ws)
-        | w ^. wRow > row = backgroundFill (l ^. lCols) 1 : go (row + 1) (w : ws)
+        | w ^. wRow > row = emptyRow   : go (row + 1) (w : ws)
         | otherwise       = drawWord w : go (row + 1) ws
 
     drawWord :: ActiveWord -> Image
-    drawWord w = 
-        let (typed, untyped) = T.splitAt (w ^. wIndex) (w ^. wWord)
-        in  string defAttr (L.replicate (w ^. wCol) ' ') V.<|>
-            text (defAttr `withStyle` reverseVideo) typed V.<|>
-            text defAttr untyped
+    drawWord a = 
+        let w                = a ^. wWord
+            (typed, untyped) = T.splitAt (a ^. wIndex) w
+        in        bar 
+            V.<|> backgroundFill (a ^. wCol) 1
+            V.<|> text (defAttr `withStyle` reverseVideo) typed 
+            V.<|> text defAttr untyped
+            V.<|> backgroundFill (cols - a ^. wCol - fromIntegral (T.length w)) 1
+            V.<|> bar
+
+    cols :: Int
+    cols = l ^. lCols
+
+    bar, topRow, emptyRow, middleRow, bottomRow, statsRow :: Image
+    bar       = char defAttr '│'
+    topRow    = char defAttr '┌' V.<|> charFill defAttr '─' cols 1 V.<|> char defAttr '┐'
+    emptyRow  = bar              V.<|> backgroundFill cols 1       V.<|> bar
+    middleRow = char defAttr '├' V.<|> charFill defAttr '─' cols 1 V.<|> char defAttr '┤'
+    bottomRow = char defAttr '└' V.<|> charFill defAttr '─' cols 1 V.<|> char defAttr '┘'
+    statsRow  =
+        let score  = "Score: " ++ show (l ^. lScore)
+            lives  = "Lives: " ++ show (l ^. lLives)
+            middle = backgroundFill (cols - L.length score - L.length lives) 1
+        in        bar 
+            V.<|> string defAttr score
+            V.<|> middle
+            V.<|> string defAttr lives
+            V.<|> bar
