@@ -4,6 +4,7 @@ Cabal-Version: >= 2.0
 Build-Type:    Simple
 Copyright:     © 2020 Lars Bruenjes
 Author:        Lars Bruenjes
+data-files:    words.txt
 
 library
     exposed-modules:
@@ -40,6 +41,8 @@ executable die
 executable letters
   hs-source-dirs:      app
   main-is:             letters.hs
+  other-modules:       Paths_letters_frp
+  autogen-modules:     Paths_letters_frp
   build-depends:       base >= 4.7 && < 5
                      , letters-frp
                      , optics

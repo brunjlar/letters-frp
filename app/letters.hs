@@ -20,6 +20,7 @@ import           Reactive.Banana.Frameworks as B
 import           System.Environment         (getArgs)
 import           System.Random              (randomRIO)
 
+import           Paths_letters_frp          (getDataFileName)
 import           Reactive.Banana.Vty        (runVtyWithTimer')
 
 data LettersState = MkLettersState
@@ -111,12 +112,6 @@ typeChar c l =
 
 gameOver :: LettersState -> Bool
 gameOver l = l ^. lLives <= 0
-
-main :: IO ()
-main = do
-    [wordFile] <- getArgs
-    gen        <- mkWordGenerator wordFile
-    runVtyWithTimer' 10000 $ describeNetwork $ initialLettersState gen
 
 describeNetwork :: LettersState
                 -> B.Event V.Event
@@ -228,3 +223,12 @@ render l = picForImage $ vertCat $
             V.<|> middle
             V.<|> string defAttr lives
             V.<|> bar
+
+main :: IO ()
+main = do
+    args <- getArgs
+    wordFile <- case args of
+        [f] -> return f
+        _   -> getDataFileName "words.txt"
+    gen <- mkWordGenerator wordFile
+    runVtyWithTimer' 10000 $ describeNetwork $ initialLettersState gen
