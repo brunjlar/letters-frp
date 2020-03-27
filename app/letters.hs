@@ -7,17 +7,20 @@ module Main
     ( main
     ) where
 
-import Data.Int (Int64)
-import Data.List as L
-import Data.Maybe
-import Data.Text.Lazy as T
-import Graphics.Vty as V
-import Optics
-import Reactive.Banana as B
-import Reactive.Banana.Frameworks as B
-import System.Random (randomRIO)
+import           Data.Int                   (Int64)
+import           Data.List                  as L
+import           Data.Maybe
+import           Data.Text.Lazy             as T
+import           Data.Text.Lazy.IO          as T
+import qualified Data.Vector                as A
+import           Graphics.Vty               as V
+import           Optics
+import           Reactive.Banana            as B
+import           Reactive.Banana.Frameworks as B
+import           System.Environment         (getArgs)
+import           System.Random              (randomRIO)
 
-import Reactive.Banana.Vty (runVtyWithTimer')
+import           Reactive.Banana.Vty        (runVtyWithTimer')
 
 data LettersState = MkLettersState
     { _lActiveWords  :: ![ActiveWord]
@@ -39,15 +42,25 @@ data ActiveWord = MkActiveWord
 makeLenses ''LettersState
 makeLenses ''ActiveWord
 
-initialLettersState :: LettersState
-initialLettersState = MkLettersState
-    { _lActiveWords  = [ MkActiveWord "foo" 1 3 10, MkActiveWord "bar" 2 10 70]
+mkWordGenerator :: FilePath -> IO (IO Text)
+mkWordGenerator wordFile = do
+    ws <- A.fromList . T.lines <$> T.readFile wordFile
+    let c = A.length ws
+    if c == 0
+        then error $ "file '" ++ wordFile ++ "' contains no words"
+        else return $ do
+            i <- randomRIO (0, c - 1)
+            return $ ws A.! i
+
+initialLettersState :: IO Text -> LettersState
+initialLettersState gen = MkLettersState
+    { _lActiveWords  = []
     , _lRows         = 25 
     , _lCols         = 80
     , _lDropInterval = 10
     , _lScore        = 0
     , _lLives        = 3
-    , _lNewWord      = return "haskell"
+    , _lNewWord      = gen
     }
 
 dropWords :: LettersState -> LettersState
@@ -85,7 +98,10 @@ gameOver :: LettersState -> Bool
 gameOver l = l ^. lLives <= 0
 
 main :: IO ()
-main = runVtyWithTimer' 1000000 $ describeNetwork initialLettersState
+main = do
+    [wordFile] <- getArgs
+    gen        <- mkWordGenerator wordFile
+    runVtyWithTimer' 1000000 $ describeNetwork $ initialLettersState gen
 
 describeNetwork :: LettersState
                 -> B.Event V.Event
