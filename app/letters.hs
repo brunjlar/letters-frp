@@ -23,13 +23,16 @@ import           System.Random              (randomRIO)
 import           Reactive.Banana.Vty        (runVtyWithTimer')
 
 data LettersState = MkLettersState
-    { _lActiveWords :: ![ActiveWord]
-    , _lRows        :: !Int
-    , _lCols        :: !Int
-    , _lNewInterval :: !Int
-    , _lScore       :: !Int
-    , _lLives       :: !Int
-    , _lNewWord     :: !(IO Text)
+    { _lActiveWords     :: ![ActiveWord]
+    , _lRows            :: !Int
+    , _lCols            :: !Int
+    , _lNextDrop        :: !Int
+    , _lDropInterval    :: !Int
+    , _lMinDropInterval :: !Int
+    , _lNewInterval     :: !Int
+    , _lScore           :: !Int
+    , _lLives           :: !Int
+    , _lNewWord         :: !(IO Text)
     }
 
 data ActiveWord = MkActiveWord
@@ -54,18 +57,25 @@ mkWordGenerator wordFile = do
 
 initialLettersState :: IO Text -> LettersState
 initialLettersState gen = MkLettersState
-    { _lActiveWords = []
-    , _lRows        = 25 
-    , _lCols        = 80
-    , _lNewInterval = 7
-    , _lScore       = 0
-    , _lLives       = 3
-    , _lNewWord     = gen
+    { _lActiveWords     = []
+    , _lRows            = 25 
+    , _lCols            = 80
+    , _lNextDrop        = 100
+    , _lDropInterval    = 100
+    , _lMinDropInterval = 20
+    , _lNewInterval     = 700
+    , _lScore           = 0
+    , _lLives           = 3
+    , _lNewWord         = gen
     }
+
+tickLetters :: LettersState -> LettersState
+tickLetters l = l & lNextDrop %~ max 0 . pred
 
 dropWords :: LettersState -> LettersState
 dropWords l = l & lActiveWords .~ words'
-                & lLives %~ (+ (L.length words' - L.length (l ^. lActiveWords)))
+                & lLives       %~ (+ (L.length words' - L.length (l ^. lActiveWords)))
+                & lNextDrop    .~ l ^. lDropInterval
   where
     words' :: [ActiveWord]
     words' = mapMaybe dropWord $ l ^. lActiveWords
@@ -82,8 +92,13 @@ typeChar :: Char -> LettersState -> LettersState
 typeChar c l = 
     let oldWords = l ^. lActiveWords
         newWords = mapMaybe f oldWords
-    in  l & lActiveWords .~ newWords
-          & lScore       %~ (+ (L.length oldWords - L.length newWords))
+        delta    = L.length oldWords - L.length newWords
+    in  l & lActiveWords  .~ newWords
+          & lScore        %~ (+ delta)
+          & lDropInterval .~ if delta > 0 
+                then max (l ^. lMinDropInterval) (l ^. lDropInterval - 1)
+                else l ^. lDropInterval
+                                         
   where
     f :: ActiveWord -> Maybe ActiveWord
     f a
@@ -101,7 +116,7 @@ main :: IO ()
 main = do
     [wordFile] <- getArgs
     gen        <- mkWordGenerator wordFile
-    runVtyWithTimer' 700000 $ describeNetwork $ initialLettersState gen
+    runVtyWithTimer' 10000 $ describeNetwork $ initialLettersState gen
 
 describeNetwork :: LettersState
                 -> B.Event V.Event
@@ -110,13 +125,14 @@ describeNetwork :: LettersState
 describeNetwork letters vtyE tickE = mdo
     let gameOverB = gameOver <$> lettersB 
         activeB   = not <$> gameOverB
-        dropE     = whenE activeB $ const dropWords <$> tickE 
 
-    newE <- whenE activeB <$> newWordE lettersB tickE
-    let addE  = addWord <$> newE
-        typeE = typeChar <$> keyE vtyE
+    newE <- newWordE lettersB tickE
+    let addE   = addWord     <$> whenE activeB newE
+        typeE  = typeChar    <$> whenE activeB (keyE vtyE)
+        countE = tickLetters <$  whenE activeB tickE
+        dropE  = dropWords   <$  whenE activeB (dropWordsE lettersB tickE)
 
-    lettersB <- accumB letters $ unions [addE, dropE, typeE]
+    lettersB <- accumB letters $ unions [addE, dropE, typeE, countE]
 
     return (render <$> lettersB, escE vtyE)
 
@@ -131,6 +147,14 @@ keyE vtyE = filterJust $ f <$> vtyE
     f :: V.Event -> Maybe Char
     f (EvKey (KChar c) []) = Just c
     f _                    = Nothing
+
+dropWordsE :: Behavior LettersState -> B.Event () -> B.Event ()
+dropWordsE lettersB = filterJust . apply (fmap f lettersB)
+  where
+    f :: LettersState -> () -> Maybe ()
+    f l ()
+        | l ^. lNextDrop == 0 = Just ()
+        | otherwise           = Nothing
 
 newWordE :: Behavior LettersState -> B.Event () -> MomentIO (B.Event ActiveWord)
 newWordE lettersB = fmap filterJust . execute . fmap liftIO . apply (fmap f lettersB)
