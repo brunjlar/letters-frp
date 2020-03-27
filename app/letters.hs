@@ -101,7 +101,7 @@ main :: IO ()
 main = do
     [wordFile] <- getArgs
     gen        <- mkWordGenerator wordFile
-    runVtyWithTimer' 1000000 $ describeNetwork $ initialLettersState gen
+    runVtyWithTimer' 700000 $ describeNetwork $ initialLettersState gen
 
 describeNetwork :: LettersState
                 -> B.Event V.Event
@@ -116,7 +116,7 @@ describeNetwork letters vtyE tickE = mdo
     let addE  = addWord <$> newE
         typeE = typeChar <$> keyE vtyE
 
-    lettersB <- accumB letters $ unions [dropE, addE, typeE]
+    lettersB <- accumB letters $ unions [addE, dropE, typeE]
 
     return (render <$> lettersB, escE vtyE)
 
@@ -140,8 +140,8 @@ newWordE lettersB = fmap filterJust . execute . fmap liftIO . apply (fmap f lett
         | topBlocked = return Nothing
         | otherwise  = do
             r <- randomRIO (0, l ^. lDropInterval)
-            if r > 0 then return Nothing
-                     else do
+            if r > 0 && not (L.null $ l ^. lActiveWords) then return Nothing
+                                                       else do
                 w <- l ^. lNewWord
                 c <- randomRIO (0, l ^. lCols - fromIntegral (T.length w))
                 return $ Just MkActiveWord
