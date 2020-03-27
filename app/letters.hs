@@ -23,13 +23,13 @@ import           System.Random              (randomRIO)
 import           Reactive.Banana.Vty        (runVtyWithTimer')
 
 data LettersState = MkLettersState
-    { _lActiveWords  :: ![ActiveWord]
-    , _lRows         :: !Int
-    , _lCols         :: !Int
-    , _lDropInterval :: !Int
-    , _lScore        :: !Int
-    , _lLives        :: !Int
-    , _lNewWord      :: !(IO Text)
+    { _lActiveWords :: ![ActiveWord]
+    , _lRows        :: !Int
+    , _lCols        :: !Int
+    , _lNewInterval :: !Int
+    , _lScore       :: !Int
+    , _lLives       :: !Int
+    , _lNewWord     :: !(IO Text)
     }
 
 data ActiveWord = MkActiveWord
@@ -54,13 +54,13 @@ mkWordGenerator wordFile = do
 
 initialLettersState :: IO Text -> LettersState
 initialLettersState gen = MkLettersState
-    { _lActiveWords  = []
-    , _lRows         = 25 
-    , _lCols         = 80
-    , _lDropInterval = 7
-    , _lScore        = 0
-    , _lLives        = 3
-    , _lNewWord      = gen
+    { _lActiveWords = []
+    , _lRows        = 25 
+    , _lCols        = 80
+    , _lNewInterval = 7
+    , _lScore       = 0
+    , _lLives       = 3
+    , _lNewWord     = gen
     }
 
 dropWords :: LettersState -> LettersState
@@ -139,17 +139,18 @@ newWordE lettersB = fmap filterJust . execute . fmap liftIO . apply (fmap f lett
     f l ()
         | topBlocked = return Nothing
         | otherwise  = do
-            r <- randomRIO (0, l ^. lDropInterval)
-            if r > 0 && not (L.null $ l ^. lActiveWords) then return Nothing
-                                                       else do
-                w <- newWord
-                c <- randomRIO (0, l ^. lCols - fromIntegral (T.length w))
-                return $ Just MkActiveWord
-                    { _wWord  = w
-                    , _wIndex = 0
-                    , _wRow   = 0
-                    , _wCol   = c
-                    }
+            r <- randomRIO (0, l ^. lNewInterval)
+            if r > 0 && not (L.null $ l ^. lActiveWords) 
+                then return Nothing
+                else do
+                    w <- newWord
+                    c <- randomRIO (0, l ^. lCols - fromIntegral (T.length w))
+                    return $ Just MkActiveWord
+                        { _wWord  = w
+                        , _wIndex = 0
+                        , _wRow   = 0
+                        , _wCol   = c
+                        }
 
       where
         topBlocked :: Bool
