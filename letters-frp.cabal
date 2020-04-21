@@ -27,6 +27,23 @@ executable counter
   ghc-options:         -Wall -threaded -O3
   default-language:    Haskell2010
 
+executable counter-brick
+  hs-source-dirs:      app
+  main-is:             counter-brick.hs
+  build-depends:       base >= 4.7 && < 5
+                     , brick
+                     , reactive-banana
+  ghc-options:         -Wall -threaded -O3
+  default-language:    Haskell2010
+
+executable counter-vty
+  hs-source-dirs:      app
+  main-is:             counter-vty.hs
+  build-depends:       base >= 4.7 && < 5
+                     , vty
+  ghc-options:         -Wall -threaded -O3
+  default-language:    Haskell2010
+
 executable die
   hs-source-dirs:      app
   main-is:             die.hs
@@ -34,6 +51,14 @@ executable die
                      , letters-frp
                      , random
                      , reactive-banana
+                     , vty
+  ghc-options:         -Wall -threaded -O3
+  default-language:    Haskell2010
+
+executable hello-vty
+  hs-source-dirs:      app
+  main-is:             hello-vty.hs
+  build-depends:       base >= 4.7 && < 5
                      , vty
   ghc-options:         -Wall -threaded -O3
   default-language:    Haskell2010
