@@ -4,7 +4,14 @@ Cabal-Version: >= 2.0
 Build-Type:    Simple
 Copyright:     © 2020 Lars Bruenjes
 Author:        Lars Bruenjes
+Maintainer:    brunjlar@gmail.com
 data-files:    words.txt
+license:       MIT
+license-file:  LICENSE
+
+extra-source-files:
+    README.md
+    stack.yaml
 
 library
     exposed-modules:

@@ -1,3 +1,14 @@
+-- |
+-- Module:      Reactive.Banana.Vty
+-- Copyright:   (c) 2020 by Dr. Lars Brünjes
+-- Licence:     MIT
+-- Maintainer:  Dr. Lars Brünjes <brunjlar@gmail.com>
+-- Stability:   Provisional
+-- Portability: portable
+--
+-- This module provides functions to create simple TUI-applications
+-- using vty and Reactive Banana.
+
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Reactive.Banana.Vty
@@ -9,15 +20,16 @@ module Reactive.Banana.Vty
 
 import Control.Concurrent
 import Control.Monad
-import Data.Void (Void)
-import Graphics.Vty as V
-import Reactive.Banana as B
+import Data.Void                  (Void)
+import Graphics.Vty               as V
+import Reactive.Banana            as B
 import Reactive.Banana.Frameworks as B
 
-runVty :: AddHandler e 
-       -> (   B.Event V.Event 
+-- | Run a vty application using a custom event.
+runVty :: AddHandler e                                 -- ^ An @'AddHandler'@ for the custom event.
+       -> (   B.Event V.Event
            -> B.Event e 
-           -> MomentIO (Behavior Picture, B.Event ())) 
+           -> MomentIO (Behavior Picture, B.Event ())) -- ^ Function to create the desired behavior of pictures and shutdown event, given the vty-event and the custom event.
        -> IO ()
 runVty addHandler describeNetwork = do
     cfg                   <- standardIOConfig
@@ -38,17 +50,21 @@ runVty addHandler describeNetwork = do
     killThread tid
     shutdown vty
 
-runVty' :: (B.Event V.Event -> MomentIO (Behavior Picture, B.Event ())) -> IO ()
+-- | Run a vty application.
+runVty' :: (B.Event V.Event -> MomentIO (Behavior Picture, B.Event ())) -- ^ Function to create the desired behavior of pictures and shutdown event, given the vty-event.
+        -> IO ()
 runVty' describeNetwork = do
     (addVoid, _) <- newAddHandler :: IO (AddHandler Void, Handler Void)
     runVty addVoid $ \vtyE _ -> describeNetwork vtyE
 
+-- | Run a vty application using a custom event and a tick event.
 runVtyWithTimer :: forall e. AddHandler e 
-                -> Int
-                -> (   B.Event V.Event 
+                -> Int                                          -- ^ Time between ticks in microseconds.
+                -> (   B.Event V.Event
                     -> B.Event ()
                     -> B.Event e 
-                    -> MomentIO (Behavior Picture, B.Event ())) 
+                    -> MomentIO (Behavior Picture, B.Event ())) -- ^ Function to create the desired behavior of pictures and shutdown event, 
+                                                                -- given the vty-event, tick-event and custom-event.
                 -> IO ()
 runVtyWithTimer addHandler interval describeNetwork = do
     (addTimer, tick) <- newAddHandler
@@ -69,12 +85,13 @@ runVtyWithTimer addHandler interval describeNetwork = do
         let (tickE, e') = split e
         describeNetwork vtyE tickE e'
 
-runVtyWithTimer' :: Int
-                 -> (   B.Event V.Event 
+-- | Run a vty application using a tick event.
+runVtyWithTimer' :: Int                                          -- ^ Time between ticks in microseconds.
+                 -> (   B.Event V.Event
                      -> B.Event ()
-                     -> MomentIO (Behavior Picture, B.Event ())) 
+                     -> MomentIO (Behavior Picture, B.Event ())) -- ^ Function to create the desired behavior of pictures and shutdown event, 
+                                                                 -- given the vty-event and tick-event.
                  -> IO ()
 runVtyWithTimer' interval describeNetwork = do
     (addVoid, _) <- newAddHandler :: IO (AddHandler Void, Handler Void)
     runVtyWithTimer addVoid interval $ \vtyE tickE _ -> describeNetwork vtyE tickE
-
